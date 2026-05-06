@@ -424,7 +424,7 @@ export const universalHelpers: Record<string, any> = {
 
 	parse: terminal(
 		(
-			target: Guard<any, Record<string, any>>,
+			target: Guard<any>,
 			value: unknown,
 			errMsg?: string | ((meta: GuardMeta) => string)
 		): Result<any, GuardErr> => {
@@ -509,7 +509,7 @@ export const universalHelpers: Record<string, any> = {
 	}),
 
 	not: property(
-		transformer((target: Guard<any, Record<string, any>>) => ({
+		transformer((target: Guard<any>) => ({
 			fn: (v: unknown): v is unknown => !target(v),
 			meta: { name: `${target.meta.name}.not` },
 			helpers: {}, // drops helpers — "not T" is unknown
@@ -517,7 +517,7 @@ export const universalHelpers: Record<string, any> = {
 		}))
 	) as any,
 
-	and: transformer((target, other: Guard<any, Record<string, any>>) => ({
+	and: transformer((target, other: Guard<any>) => ({
 		fn: (v: unknown): v is any => {
 			if (!target(v)) return false;
 			const transformed = target.meta.transform ? target.meta.transform(v, v) : v;
@@ -527,31 +527,40 @@ export const universalHelpers: Record<string, any> = {
 		transform: other.meta.transform ? (v: unknown) => other.meta.transform!(v, v) : undefined,
 	})),
 
-	or: transformer((target, other: Guard<any, Record<string, any>>) => ({
+	or: transformer((target, other: Guard<any>) => ({
 		fn: (v: unknown): v is any => target(v) || other(v),
-		meta: { name: `${target.meta.name}.or(${other.meta?.name ?? '?'})` },
+		meta: {
+			name: `${target.meta.name}.or(${other.meta?.name ?? '?'})`,
+			isNullable: (other.meta?.isNullable ?? false) || (target.meta?.isNullable ?? false),
+			isOptional: (other.meta?.isOptional ?? false) || (target.meta?.isOptional ?? false),
+		},
 		helpers: {},
 		replaceHelpers: true,
 	})),
 
-	xor: transformer((target, other: Guard<any, Record<string, any>>) => ({
+	xor: transformer((target, other: Guard<any>) => ({
 		fn: (v: unknown): v is any => {
 			// Evaluate each predicate exactly once; short-circuit on unanimous rejection or match.
 			const a = target(v);
 			const b = other(v);
 			return a !== b; // exactly one passes
 		},
-		meta: { name: `${target.meta.name}.xor(${other.meta?.name ?? '?'})` },
+		meta: {
+			name: `${target.meta.name}.xor(${other.meta?.name ?? '?'})`,
+			isNullable: (other.meta?.isNullable ?? false) || (target.meta?.isNullable ?? false),
+			isOptional: (other.meta?.isOptional ?? false) || (target.meta?.isOptional ?? false),
+		},
 		helpers: {},
 		replaceHelpers: true,
 	})),
 
 	nullable: property(
-		transformer((target: Guard<any, Record<string, any>>) => ({
+		transformer((target: Guard<any>) => ({
 			fn: (v: unknown): v is any => v === null || target(v),
 			meta: {
 				name: `${target.meta.name}.nullable`,
 				jsonSchema: { ...target.meta.jsonSchema, _nullable: true },
+				isNullable: true,
 			},
 			helpers: {},
 			replaceHelpers: true,
@@ -559,11 +568,12 @@ export const universalHelpers: Record<string, any> = {
 	) as any,
 
 	optional: property(
-		transformer((target: Guard<any, Record<string, any>>) => ({
+		transformer((target: Guard<any>) => ({
 			fn: (v: unknown): v is any => v === undefined || target(v),
 			meta: {
 				name: `${target.meta.name}.optional`,
 				jsonSchema: { ...target.meta.jsonSchema, _optional: true },
+				isOptional: true,
 			},
 			helpers: {},
 			replaceHelpers: true,
@@ -571,11 +581,13 @@ export const universalHelpers: Record<string, any> = {
 	) as any,
 
 	nullish: property(
-		transformer((target: Guard<any, Record<string, any>>) => ({
+		transformer((target: Guard<any>) => ({
 			fn: (v: unknown): v is any => v == null || target(v),
 			meta: {
 				name: `${target.meta.name}.nullish`,
 				jsonSchema: { ...target.meta.jsonSchema, _nullable: true, _optional: true },
+				isNullable: true,
+				isOptional: true,
 			},
 			helpers: {},
 			replaceHelpers: true,
@@ -615,10 +627,7 @@ export const universalHelpers: Record<string, any> = {
 	}),
 
 	annotate: transformer(
-		(
-			target: Guard<any, Record<string, any>>,
-			data: Record<string, unknown> | ((meta: GuardMeta) => Record<string, unknown>)
-		) => {
+		(target: Guard<any>, data: Record<string, unknown> | ((meta: GuardMeta) => Record<string, unknown>)) => {
 			let dataMeta: Record<string, unknown>;
 			if (typeof data === 'function') {
 				dataMeta = data(target.meta);
@@ -643,7 +652,7 @@ export const universalHelpers: Record<string, any> = {
 	),
 
 	array: property(
-		transformer((target: Guard<any, Record<string, any>>) => ({
+		transformer((target: Guard<any>) => ({
 			fn: (v: unknown): v is any[] => Array.isArray(v) && v.every(item => target(item)),
 			meta: {
 				name: `${target.meta.name}[]`,
@@ -656,7 +665,7 @@ export const universalHelpers: Record<string, any> = {
 		}))
 	) as any,
 
-	transform: transformer((target: Guard<any, Record<string, any>>, fn: ((value: any) => any) | unknown) => ({
+	transform: transformer((target: Guard<any>, fn: ((value: any) => any) | unknown) => ({
 		fn: (v: unknown): v is any => target(v),
 		meta: { name: `${target.meta.name}.transform(${typeof fn === 'function' ? 'fn' : safeStringify(fn)})` },
 		transform: (v: any) => (typeof fn === 'function' ? fn(v) : fn), // createProxy handles composition with parent transforms
@@ -664,7 +673,7 @@ export const universalHelpers: Record<string, any> = {
 		replaceHelpers: true,
 	})),
 
-	refine: transformer((target: Guard<any, Record<string, any>>, fn: ((value: any) => any) | unknown) => ({
+	refine: transformer((target: Guard<any>, fn: ((value: any) => any) | unknown) => ({
 		fn: (v: unknown): v is any => target(v),
 		meta: { name: `${target.meta.name}.refine(${typeof fn === 'function' ? 'fn' : safeStringify(fn)})` },
 		transform: (v: any) => (typeof fn === 'function' ? fn(v) : fn), // createProxy handles composition with parent transforms
@@ -672,7 +681,7 @@ export const universalHelpers: Record<string, any> = {
 	})),
 
 	coerce: property(
-		transformer((target: Guard<any, Record<string, any>>) => {
+		transformer((target: Guard<any>) => {
 			const id = target.meta.id.toLowerCase();
 			const coercer = COERCERS[id];
 
@@ -691,13 +700,11 @@ export const universalHelpers: Record<string, any> = {
 		})
 	),
 
-	toJsonSchema: terminal(
-		(target: Guard<any, Record<string, any>>): JsonSchemaNode => cleanSchema(buildJsonSchema(target))
-	) as any,
+	toJsonSchema: terminal((target: Guard<any>): JsonSchemaNode => cleanSchema(buildJsonSchema(target))) as any,
 
-	arbitrary: terminal((target: Guard<any, Record<string, any>>) => arbitraryTerminal(target)) as any,
+	arbitrary: terminal((target: Guard<any>) => arbitraryTerminal(target)) as any,
 
-	generate: terminal((target: Guard<any, Record<string, any>>, n?: number) => generateTerminal(target, n)) as any,
+	generate: terminal((target: Guard<any>, n?: number) => generateTerminal(target, n)) as any,
 
 	whereAsync: terminal((target: Guard<any>, fn: (v: any) => Promise<boolean>) =>
 		new AsyncGuard(target, []).whereAsync(fn)

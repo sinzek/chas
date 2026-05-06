@@ -15,13 +15,14 @@ export const UndefinedGuard: UndefinedGuard = makeGuard(
 	{
 		name: 'undefined',
 		id: 'undefined',
+		isOptional: true,
 	},
 	undefinedHelpers
 ) as any;
 
 export const VoidGuard: VoidGuard = makeGuard(
 	(v: unknown): v is void => v === undefined,
-	{ name: 'void', id: 'void' },
+	{ name: 'void', id: 'void', isOptional: true },
 	undefinedHelpers
 ) as any;
 
@@ -30,5 +31,10 @@ export const OptionalGuardFactory: OptionalGuardFactory = <T>(guard: Guard<T>) =
 		id: 'optional',
 		name: `optional<${guard.meta.name}>`,
 		inner: guard,
+		isOptional: true,
+		jsonSchema: {
+			...guard.meta.jsonSchema,
+			_optional: true,
+		},
 	});
 };

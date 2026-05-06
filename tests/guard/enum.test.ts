@@ -61,7 +61,7 @@ describe('is.enum (v2)', () => {
 	});
 
 	it('works with objects', () => {
-		const example = is.enum([1, 2, 3]);
+		const _example = is.enum([1, 2, 3]);
 		const example2 = is.object({
 			example: is.enum([1, 2, 3]),
 			example2: is.enum(Direction),

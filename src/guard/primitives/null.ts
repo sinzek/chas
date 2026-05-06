@@ -11,6 +11,7 @@ export interface NullableGuardFactory {
 export const NullGuard: NullGuard = makeGuard((v: unknown): v is null => v === null, {
 	name: 'null',
 	id: 'null',
+	isNullable: true,
 }) as any;
 
 export const NullableGuardFactory: NullableGuardFactory = <T>(guard: Guard<T>) => {
@@ -18,5 +19,10 @@ export const NullableGuardFactory: NullableGuardFactory = <T>(guard: Guard<T>) =
 		id: 'nullable',
 		name: `nullable<${guard.meta.name}>`,
 		inner: guard,
+		isNullable: true,
+		jsonSchema: {
+			...guard.meta.jsonSchema,
+			_nullable: true,
+		},
 	});
 };

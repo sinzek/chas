@@ -11,5 +11,12 @@ export const NullishGuardFactory: NullishGuardFactory = <T>(guard: Guard<T>) => 
 		id: 'nullish',
 		name: `nullish<${guard.meta.name}>`,
 		inner: guard,
+		isNullable: true,
+		isOptional: true,
+		jsonSchema: {
+			...guard.meta.jsonSchema,
+			_nullable: true,
+			_optional: true,
+		},
 	});
 };

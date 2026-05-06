@@ -185,7 +185,7 @@ export type GuardMeta = {
 	 * For object guards: the record of field names to their guards.
 	 * Used by `defineSchemas` to recurse into nested objects for deep error collection.
 	 */
-	shape?: Record<string, Guard<any, Record<string, any>>> | undefined;
+	shape?: Record<string, Guard<any>> | undefined;
 	/**
 	 * For literal guards: the set of allowed values.
 	 * Included in error output so consumers can display "expected one of: ...".
@@ -215,11 +215,19 @@ export type GuardMeta = {
 	 */
 	description?: string | undefined;
 	/**
+	 * Whether this guard is nullable. Populated by `.nullable()`, `.nullish()`, or `is.nullable(inner)`.
+	 */
+	isNullable?: boolean;
+	/**
+	 * Whether this guard is optional. Populated by `.optional()`, `.nullish()`, or `is.optional(inner)`.
+	 */
+	isOptional?: boolean;
+	/**
 	 * @internal The guard one chain step below this one. Used to walk the chain
 	 * at error time so refinement failures can point at the specific step that rejected.
 	 * Populated automatically by `createProxy`; do not set manually.
 	 */
-	_parent?: Guard<any, any> | undefined;
+	_parent?: RawGuard | undefined;
 	/**
 	 * @internal Accumulated refinement predicates (from factory and value helpers)
 	 * that shape-altering transformers (`partial`, `pick`, `omit`, `extend`, `required`)
@@ -249,6 +257,9 @@ export type GuardMeta = {
 	/** Index signature for custom metadata fields. Access with bracket notation. */
 	[key: string]: any;
 };
+
+/** @internal */
+export type RawGuard = { (value: unknown): value is any; meta: GuardMeta };
 
 /**
  * Extracts the validated type `T` from a guard.
@@ -497,12 +508,12 @@ export function getType(v: any): string {
  * Returns `undefined` if the root predicate already rejects (type mismatch, not a
  * refinement) or if no rejecting step is found (which would indicate a spurious call).
  */
-export function findFailingStep(guard: Guard<any, any>, value: unknown): Guard<any, any> | undefined {
-	const chain: Guard<any, any>[] = [];
-	let cur: Guard<any, any> | undefined = guard;
+export function findFailingStep(guard: RawGuard, value: unknown): RawGuard | undefined {
+	const chain: RawGuard[] = [];
+	let cur: RawGuard | undefined = guard;
 	while (cur) {
 		chain.unshift(cur);
-		cur = cur.meta._parent as Guard<any, any> | undefined;
+		cur = cur.meta._parent;
 	}
 	if (chain.length === 0 || !chain[0]!(value)) return undefined;
 	for (let i = 1; i < chain.length; i++) {
@@ -516,8 +527,8 @@ export function findFailingStep(guard: Guard<any, any>, value: unknown): Guard<a
  * stripping the parent's accumulated name prefix. Falls back to the full name
  * if the parent name isn't a clean prefix.
  */
-function stepLocalName(step: Guard<any, any>): string {
-	const parent = step.meta._parent as Guard<any, any> | undefined;
+function stepLocalName(step: RawGuard): string {
+	const parent = step.meta._parent;
 	if (parent && step.meta.name.startsWith(parent.meta.name)) {
 		const suffix = step.meta.name.slice(parent.meta.name.length);
 		return suffix || step.meta.name;
@@ -538,7 +549,7 @@ function stepLocalName(step: Guard<any, any>): string {
  * The guard chain name is always available on the error's `.name` field
  * for programmatic inspection — no need to duplicate it in the message.
  */
-export function buildGuardErrMsg(meta: GuardMeta, v: unknown, guard?: Guard<any, any>): string {
+export function buildGuardErrMsg(meta: GuardMeta, v: unknown, guard?: RawGuard): string {
 	const actual = getType(v);
 	const isRefinementFailure =
 		actual === meta.id ||
@@ -566,7 +577,7 @@ export function buildGuardErrMsg(meta: GuardMeta, v: unknown, guard?: Guard<any,
  * `_parent` chain to pinpoint which refinement failed.
  */
 export function buildGuardErr(
-	guard: Guard<any, any>,
+	guard: RawGuard,
 	value: unknown,
 	customMsg?: string | ((meta: GuardMeta) => string) | undefined
 ): GuardErr {

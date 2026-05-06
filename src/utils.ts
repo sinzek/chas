@@ -112,15 +112,20 @@ export type DeepReadonly<T, D extends any[] = []> = D['length'] extends 4
 		? { readonly [K in keyof T]: DeepReadonly<T[K], [...D, 0]> }
 		: T;
 
-// A utility type that checks if T exhaustively covers all members of U.
-type ExhaustiveArray<T extends readonly any[], U> = [U] extends [T[number]] ? T : [...T, Exclude<U, T[number]>];
+/** Recursively makes all keys optional at every nesting level (up to 4 levels deep). */
+export type DeepOptional<T, D extends any[] = []> = D['length'] extends 4
+	? T
+	: T extends object
+		? { [K in keyof T]?: DeepOptional<T[K], [...D, 0]> }
+		: T;
 
-// A helper function that takes the Union type and returns a function
-// to validate the array input.
-export const exhaustiveArray =
-	<U>() =>
-	<T extends readonly U[]>(...t: [...(T extends ExhaustiveArray<T, U> ? T : ExhaustiveArray<T, U>)]) =>
-		t as T;
+/** Recursively makes all keys required at every nesting level (up to 4 levels deep). */
+export type DeepRequired<T, D extends any[] = []> = D['length'] extends 4
+	? T
+	: T extends object
+		? { [K in keyof T]-?: DeepRequired<T[K], [...D, 0]> }
+		: T;
+
 /**
  * Performs a deep equality check between two values.
  */
