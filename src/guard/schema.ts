@@ -500,7 +500,7 @@ type SchemaInput = Guard<any, any, any> | Record<string, SchemaInputValue>;
  * `Guard<any, any, any>` evaluates to `any` once the third intersection branch is `any`)
  * and let plain records pass through unwrapped.
  */
-import { type ObjectGuard } from './objects/object.js';
+import { ObjectGuardFactory, type ObjectGuard } from './objects/object.js';
 import { type InferObjectSchema } from './objects/object-helpers.js';
 
 export type InferInput<T> = T extends { $infer: any }
@@ -607,33 +607,17 @@ function resolveGuard(schemaName: string, input: SchemaInput | SchemaInputValue)
 		shape[key] = resolveGuard(schemaName, value);
 	}
 
-	const names = Object.keys(shape)
-		.map(k => `${k}: ${shape[k]!.meta.name}`)
-		.join(', ');
-
 	// Create a minimal guard-like object with shape metadata
-	const fn = Object.assign(
-		(v: unknown): v is any => {
-			if (v == null || typeof v !== 'object' || Array.isArray(v)) return false;
-			const obj = v as Record<string, unknown>;
-			for (const [key, guard] of Object.entries(shape)) {
-				if (!guard(obj[key])) return false;
-			}
-			return true;
-		},
-		{
-			meta: {
-				name: `object<${names}>`,
-				id: 'object',
-				shape,
-				path: [] as string[],
-				schema: schemaName,
-				error: undefined,
-			} as GuardMeta,
-		}
-	);
+	const objGuard = ObjectGuardFactory(shape);
 
-	return fn as unknown as Guard<any>;
+	const fn = Object.assign(objGuard, {
+		meta: {
+			...objGuard.meta,
+			schema: schemaName,
+		} as GuardMeta,
+	});
+
+	return fn;
 }
 
 /**

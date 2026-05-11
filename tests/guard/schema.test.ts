@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, expectTypeOf } from 'vitest';
 import { is } from '../../src/guard/index.js';
 import {
 	defineSchemas,
@@ -911,5 +911,21 @@ describe('guard.toSchema()', () => {
 		const values = await schema.generate(5);
 		expect(values.length).toBe(5);
 		expect(values.every(v => schema.is(v))).toBe(true);
+	});
+});
+
+describe('schema.guard.extend makes object schemas extendable', () => {
+	it('returns a new schema with the added properties', () => {
+		const base = is.object({ name: is.string, age: is.number }).toSchema('User');
+		const extended = base.guard.extend({ email: is.string });
+		expect(extended({ name: 'Chase', age: 25, email: 'test@example.com' })).toBe(true);
+		expect(extended({ name: 'Chase', age: 25 })).toBe(false);
+	});
+
+	it('type-checks correctly', () => {
+		const base = is.object({ name: is.string, age: is.number }).toSchema('User');
+		const extended = base.guard.extend({ email: is.string });
+
+		expectTypeOf(extended).toEqualTypeOf(is.object({ name: is.string, age: is.number, email: is.string }));
 	});
 });

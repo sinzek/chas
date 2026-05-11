@@ -100,7 +100,7 @@ export function createProxy<T, H extends Record<string, any>>(
 			return target(args[0]);
 		},
 
-		get(target, prop: string) {
+		get(target, prop: string, receiver) {
 			if (prop === '$infer') {
 				throw GlobalErrs.ChasErr({
 					message:
@@ -128,7 +128,9 @@ export function createProxy<T, H extends Record<string, any>>(
 							} catch (transformErr) {
 								if ('fallback' in target.meta) {
 									const error = buildGuardErr(target, v);
-									return { value: evaluateFallback(target.meta.fallback, target.meta, v, error) as T };
+									return {
+										value: evaluateFallback(target.meta.fallback, target.meta, v, error) as T,
+									};
 								}
 								throw transformErr;
 							}
@@ -208,7 +210,7 @@ export function createProxy<T, H extends Record<string, any>>(
 
 			// 1. Terminal helpers - execution ends the chain or returns a non-guard value
 			if (helper[TERMINAL]) {
-				return (...args: any[]) => helper(target, ...args);
+				return (...args: any[]) => helper(receiver, ...args);
 			}
 
 			// 2. Transformer helpers - these return a new Guard with modified logic/meta/type/helpers
@@ -266,7 +268,10 @@ export function createProxy<T, H extends Record<string, any>>(
 								...target.meta,
 								_parent: target,
 								name: `${target.meta.name}.${refinementName}`,
-								_refinements: [...(target.meta._refinements ?? []), { predicate, name: refinementName }],
+								_refinements: [
+									...(target.meta._refinements ?? []),
+									{ predicate, name: refinementName },
+								],
 								...(jsonContrib && {
 									jsonSchema: { ...target.meta.jsonSchema, ...jsonContrib },
 								}),
@@ -293,7 +298,10 @@ export function createProxy<T, H extends Record<string, any>>(
 						...target.meta,
 						_parent: target,
 						name: `${target.meta.name}.${refinementName}`,
-						_refinements: [...(target.meta._refinements ?? []), { predicate: helper, name: refinementName }],
+						_refinements: [
+							...(target.meta._refinements ?? []),
+							{ predicate: helper, name: refinementName },
+						],
 						...(jsonContrib && {
 							jsonSchema: { ...target.meta.jsonSchema, ...jsonContrib },
 						}),
