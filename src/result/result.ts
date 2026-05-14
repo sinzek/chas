@@ -912,6 +912,7 @@ export interface ResultMethods<T, E> {
 	pipe(...fns: ((a: any) => any)[]): any;
 
 	toJSON<T, E>(this: Result<T, E>): { ok: true; value: T } | { ok: false; error: E };
+	readonly [Symbol.toStringTag]: 'Result';
 }
 
 export const ResultMethodsProto = {
@@ -1198,12 +1199,13 @@ export const ResultMethodsProto = {
 	toJSON<T, E>(this: Result<T, E>): { ok: true; value: T } | { ok: false; error: E } {
 		return this.ok ? { ok: true, value: this.value } : { ok: false, error: this.error };
 	},
+	[Symbol.toStringTag]: 'Result',
 };
 
 // ==== RESULT ASYNC ====
 
 /**
- * A promise-like wrapper representing a `Result` that evaluates asynchronously.
+ * A promise wrapper representing a `Result` that evaluates asynchronously.
  * Can be directly `await`ed or chained with further operators.
  *
  * @example
@@ -1211,7 +1213,7 @@ export const ResultMethodsProto = {
  * const res = ResultAsync.fromSafePromise(Promise.resolve(42));
  * ```
  */
-export class ResultAsync<T, E> implements PromiseLike<Result<T, E>> {
+export class ResultAsync<T, E> implements Promise<Result<T, E>> {
 	private readonly _promise: Promise<Result<T, E>>;
 	private _status: 'pending' | 'ok' | 'err' = 'pending';
 	private _value?: T;
@@ -1277,9 +1279,9 @@ export class ResultAsync<T, E> implements PromiseLike<Result<T, E>> {
 
 		if (isPromise(resolved)) {
 			return new ResultAsync(
-				(resolved as Promise<any>)
+				Promise.resolve(resolved as PromiseLike<any>)
 					.then(v => (isResult(v) ? v : ok(v)))
-					.catch(e => err(onThrow ? onThrow(e) : e))
+					.then(undefined, e => err(onThrow ? onThrow(e) : e))
 			) as ResultAsync<any, any>;
 		}
 
@@ -1319,8 +1321,31 @@ export class ResultAsync<T, E> implements PromiseLike<Result<T, E>> {
 	then<TResult1 = Result<T, E>, TResult2 = never>(
 		onfulfilled?: ((value: Result<T, E>) => TResult1 | PromiseLike<TResult1>) | undefined | null,
 		onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | undefined | null
-	): PromiseLike<TResult1 | TResult2> {
+	): Promise<TResult1 | TResult2> {
 		return this._promise.then(onfulfilled, onrejected);
+	}
+
+	/**
+	 * Catches rejections of the underlying promise, mirroring `Promise.prototype.catch`.
+	 *
+	 * Note: `ResultAsync` encodes failures as `Err`, not as promise rejections — the
+	 * underlying promise normally resolves for both `Ok` and `Err`. Use {@link orElse}
+	 * or {@link catchTag} to recover from `Err` values. This `catch` only fires on
+	 * unexpected rejections (e.g. a handler threw) and exists so `ResultAsync` can be
+	 * substituted anywhere a native `Promise` is expected.
+	 *
+	 * @param onrejected Handler invoked if the underlying promise rejects.
+	 * @returns A `Promise` resolving to the original `Result` or the handler's return value.
+	 *
+	 * @example
+	 * ```ts
+	 * const value = await chas.okAsync(5).catch(() => null); // Ok(5)
+	 * ```
+	 */
+	catch<TResult = never>(
+		onrejected?: ((reason: unknown) => TResult | PromiseLike<TResult>) | undefined | null
+	): Promise<Result<T, E> | TResult> {
+		return this._promise.then(undefined, onrejected);
 	}
 
 	/**
@@ -1647,8 +1672,8 @@ export class ResultAsync<T, E> implements PromiseLike<Result<T, E>> {
 	 * const data = await performQuery(conn).finally(() => db.disconnect());
 	 * ```
 	 */
-	finally(f: () => void | Promise<void>): ResultAsync<T, E> {
-		return new ResultAsync(this._promise.finally(f));
+	finally(onfinally?: (() => void | Promise<void>) | undefined | null): ResultAsync<T, E> {
+		return new ResultAsync(this._promise.finally(onfinally));
 	}
 
 	/**
@@ -1885,6 +1910,8 @@ export class ResultAsync<T, E> implements PromiseLike<Result<T, E>> {
 	toJSON<T, E>(this: ResultAsync<T, E>): Promise<{ ok: true; value: T } | { ok: false; error: E }> {
 		return this._promise.then(res => res.toJSON());
 	}
+
+	[Symbol.toStringTag] = 'ResultAsync' as const;
 }
 
 // ==== RESULT/RESULTASYNC HELPERS ====
