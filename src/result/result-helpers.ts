@@ -952,6 +952,46 @@ export const shapeAsync = <TRec extends Record<string, ResultAsync<any, any> | P
 };
 
 /**
+ * Awaits multiple `ResultAsync`s (or Promises of `Result`s) keyed by name and
+ * returns a record of the resolved `Result`s under the same keys. Unlike
+ * `shapeAsync`, does not short-circuit on the first error — every entry is
+ * preserved so callers can inspect each result independently.
+ *
+ * The async analog of `Promise.allSettled`, but keyed and `Result`-aware.
+ * Note: returns a `Promise` rather than a `ResultAsync`, because settling
+ * itself does not "fail".
+ *
+ * @param promisesRecord Object mapping keys to async Results.
+ * @returns A Promise resolving to a record of `Result`s under the same keys.
+ *
+ * @example
+ * ```ts
+ * const results = await chas.settleAsync({
+ *     user: fetchUser(id),
+ *     config: fetchConfig(),
+ * });
+ * if (results.user.isOk() && results.config.isErr()) { ... }
+ * ```
+ */
+export const settleAsync = async <
+	TRec extends Record<string, ResultAsync<any, any> | PromiseLike<Result<any, any>>>,
+>(
+	promisesRecord: TRec
+): Promise<{
+	[K in keyof TRec]: TRec[K] extends PromiseLike<Result<infer T, infer E>> ? Result<T, E> : never;
+}> => {
+	const keys = Object.keys(promisesRecord) as Array<keyof TRec & string>;
+	const promises = keys.map(key => promisesRecord[key]);
+	const results = await Promise.all(promises);
+
+	const output: any = {};
+	for (let i = 0; i < keys.length; i++) {
+		output[keys[i]!] = results[i];
+	}
+	return output;
+};
+
+/**
  * Wraps a schema with a parse method in a `Result` that returns the parsed value on success or an error on failure.
  * Most useful for those migrating from libraries like Zod.
  *

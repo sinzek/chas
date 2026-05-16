@@ -766,6 +766,26 @@ describe('chas', () => {
 			expect(errShape.unwrapErr()).toBe('fail');
 		});
 
+		it('settleAsync', async () => {
+			const results = await chas.settleAsync({
+				user: chas.okAsync(1),
+				config: chas.errAsync('config failed'),
+				flag: Promise.resolve(chas.ok(true)),
+			});
+
+			expect(results.user.isOk()).toBe(true);
+			expect(results.user.unwrap()).toBe(1);
+
+			expect(results.config.isErr()).toBe(true);
+			expect(results.config.unwrapErr()).toBe('config failed');
+
+			expect(results.flag.isOk()).toBe(true);
+			expect(results.flag.unwrap()).toBe(true);
+
+			// Does not short-circuit — every key is present even when one fails
+			expect(Object.keys(results).sort()).toEqual(['config', 'flag', 'user']);
+		});
+
 		it('go (do-notation)', () => {
 			const successGo = chas.go(function* () {
 				const a = yield* chas.ok(5);
