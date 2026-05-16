@@ -688,11 +688,11 @@ describe('chas', () => {
 			const promises = [
 				chas.okAsync(1),
 				Promise.resolve(chas.err('e1')),
-				Promise.resolve(chas.ok(2)),
+				Promise.resolve(chas.ok('two')),
 				chas.errAsync('e2'),
-			] as Iterable<PromiseLike<chas.Result<number, string>>>;
+			];
 			const { oks, errs } = await chas.partitionAsync(promises);
-			expect(oks).toEqual([1, 2]);
+			expect(oks).toEqual([1, 'two']);
 			expect(errs).toEqual(['e1', 'e2']);
 		});
 
@@ -979,12 +979,12 @@ describe('chas', () => {
 
 			expect(recovered.isOk()).toBe(true);
 			expect(recovered.unwrap()).toBe('found');
-			
+
 			// A string tag should just infer `{ readonly _tag: 'NotFound' }` and native Error props.
 			const res2 = chas.err(TestError.NotFound('book', '10')) as chas.Result<string, unknown>;
 			res2.catchTag('NotFound', e => {
 				// @ts-expect-error - string tag only infers the tag itself, not custom props
-				void e.resource; 
+				void e.resource;
 				expect(e._tag).toBe('NotFound');
 				return chas.ok(1);
 			});

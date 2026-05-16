@@ -590,9 +590,16 @@ export function wrapAsync(fn: (...args: any[]) => any, onThrow?: (error: unknown
  * // oks is [1, 2], errs is ['e']
  * ```
  */
-export const partition = <T, E>(results: Iterable<Result<T, E>>): { oks: T[]; errs: E[] } => {
-	const oks: T[] = [];
-	const errs: E[] = [];
+export function partition<T extends readonly Result<any, any>[] | []>(
+	results: T
+): {
+	oks: Array<{ [P in keyof T]: ExtractOkValue<T[P]> }[number]>;
+	errs: Array<{ [P in keyof T]: ExtractErrError<T[P]> }[number]>;
+};
+export function partition<T, E>(results: Iterable<Result<T, E>>): { oks: T[]; errs: E[] };
+export function partition(results: Iterable<Result<any, any>>): { oks: any[]; errs: any[] } {
+	const oks: any[] = [];
+	const errs: any[] = [];
 
 	for (const result of results) {
 		if (result.isOk()) {
@@ -603,7 +610,7 @@ export const partition = <T, E>(results: Iterable<Result<T, E>>): { oks: T[]; er
 	}
 
 	return { oks, errs };
-};
+}
 
 /**
  * Awaits multiple `ResultAsync`s (or Promises of `Result`s) and partitions them into separate arrays of `Ok` values and `Err` errors.
@@ -619,12 +626,21 @@ export const partition = <T, E>(results: Iterable<Result<T, E>>): { oks: T[]; er
  * // oks is [1], errs is ['e']
  * ```
  */
-export const partitionAsync = async <T, E>(
+export function partitionAsync<T extends readonly PromiseLike<Result<any, any>>[] | []>(
+	promises: T
+): Promise<{
+	oks: Array<{ [P in keyof T]: T[P] extends PromiseLike<infer R> ? ExtractOkValue<R> : never }[number]>;
+	errs: Array<{ [P in keyof T]: T[P] extends PromiseLike<infer R> ? ExtractErrError<R> : never }[number]>;
+}>;
+export function partitionAsync<T, E>(
 	promises: Iterable<PromiseLike<Result<T, E>>>
-): Promise<{ oks: T[]; errs: E[] }> => {
+): Promise<{ oks: T[]; errs: E[] }>;
+export async function partitionAsync(
+	promises: Iterable<PromiseLike<Result<any, any>>>
+): Promise<{ oks: any[]; errs: any[] }> {
 	const resolvedResults = await Promise.all(promises);
 	return partition(resolvedResults);
-};
+}
 
 /**
  *
