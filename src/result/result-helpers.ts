@@ -632,9 +632,7 @@ export function partitionAsync<T extends readonly PromiseLike<Result<any, any>>[
 	oks: Array<{ [P in keyof T]: T[P] extends PromiseLike<infer R> ? ExtractOkValue<R> : never }[number]>;
 	errs: Array<{ [P in keyof T]: T[P] extends PromiseLike<infer R> ? ExtractErrError<R> : never }[number]>;
 }>;
-export function partitionAsync<T, E>(
-	promises: Iterable<PromiseLike<Result<T, E>>>
-): Promise<{ oks: T[]; errs: E[] }>;
+export function partitionAsync<T, E>(promises: Iterable<PromiseLike<Result<T, E>>>): Promise<{ oks: T[]; errs: E[] }>;
 export async function partitionAsync(
 	promises: Iterable<PromiseLike<Result<any, any>>>
 ): Promise<{ oks: any[]; errs: any[] }> {
@@ -973,9 +971,7 @@ export const shapeAsync = <TRec extends Record<string, ResultAsync<any, any> | P
  * if (results.user.isOk() && results.config.isErr()) { ... }
  * ```
  */
-export const settleAsync = async <
-	TRec extends Record<string, ResultAsync<any, any> | PromiseLike<Result<any, any>>>,
->(
+export const settleAsync = async <TRec extends Record<string, ResultAsync<any, any> | PromiseLike<Result<any, any>>>>(
 	promisesRecord: TRec
 ): Promise<{
 	[K in keyof TRec]: TRec[K] extends PromiseLike<Result<infer T, infer E>> ? Result<T, E> : never;

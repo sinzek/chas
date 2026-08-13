@@ -24,5 +24,7 @@ export const NullableGuardFactory: NullableGuardFactory = <T>(guard: Guard<T>) =
 			...guard.meta.jsonSchema,
 			_nullable: true,
 		},
+		transform: (v: unknown, original: unknown) =>
+			original === null ? null : guard.meta.transform ? guard.meta.transform(v, original) : v,
 	});
 };

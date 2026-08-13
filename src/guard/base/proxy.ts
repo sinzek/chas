@@ -224,6 +224,9 @@ export function createProxy<T, H extends Record<string, any>>(
 							_parent: target,
 							transform: result.transform
 								? (v: any, original: any) => {
+										if (result.replaceTransform) {
+											return result.transform!(v, original);
+										}
 										const parentVal = target.meta.transform
 											? target.meta.transform(v, original)
 											: v;

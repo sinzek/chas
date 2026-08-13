@@ -557,6 +557,9 @@ export const universalHelpers: Record<string, any> = {
 	nullable: property(
 		transformer((target: Guard<any>) => ({
 			fn: (v: unknown): v is any => v === null || target(v),
+			transform: (v: unknown, original: unknown) =>
+				original === null ? null : target.meta.transform ? target.meta.transform(v, original) : v,
+			replaceTransform: true,
 			meta: {
 				name: `${target.meta.name}.nullable`,
 				jsonSchema: { ...target.meta.jsonSchema, _nullable: true },
@@ -570,6 +573,9 @@ export const universalHelpers: Record<string, any> = {
 	optional: property(
 		transformer((target: Guard<any>) => ({
 			fn: (v: unknown): v is any => v === undefined || target(v),
+			transform: (v: unknown, original: unknown) =>
+				original === undefined ? undefined : target.meta.transform ? target.meta.transform(v, original) : v,
+			replaceTransform: true,
 			meta: {
 				name: `${target.meta.name}.optional`,
 				jsonSchema: { ...target.meta.jsonSchema, _optional: true },
@@ -583,6 +589,9 @@ export const universalHelpers: Record<string, any> = {
 	nullish: property(
 		transformer((target: Guard<any>) => ({
 			fn: (v: unknown): v is any => v == null || target(v),
+			transform: (v: unknown, original: unknown) =>
+				original == null ? original : target.meta.transform ? target.meta.transform(v, original) : v,
+			replaceTransform: true,
 			meta: {
 				name: `${target.meta.name}.nullish`,
 				jsonSchema: { ...target.meta.jsonSchema, _nullable: true, _optional: true },

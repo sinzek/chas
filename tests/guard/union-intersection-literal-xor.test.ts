@@ -208,6 +208,46 @@ describe('is.union', () => {
 			expect(guard(undefined)).toBe(true);
 			expect(guard({})).toBe(false);
 		});
+
+		it('works with null and undefined guards', () => {
+			const guard = is.union(is.string, is.null, is.undefined);
+			expect(guard('a')).toBe(true);
+			expect(guard(null)).toBe(true);
+			expect(guard(undefined)).toBe(true);
+			expect(guard(1)).toBe(false);
+			expect(guard({})).toBe(false);
+
+			const guard2 = is.union(
+				is.object({
+					a: is.string,
+					b: is.number,
+				}).strict,
+				is.object({
+					a: is.string,
+					b: is.number,
+					c: is.boolean,
+				}).strict,
+				is.null
+			);
+
+			expect(guard2({ a: 'hello', b: 1 })).toBe(true);
+			expect(guard2({ a: 'hello', b: 1, c: true })).toBe(true);
+			expect(guard2(null)).toBe(true);
+			expect(guard2({ a: 'hello', b: 1, c: 'true' })).toBe(false);
+			expect(guard2({ a: 'hello', b: '1', c: true })).toBe(false);
+			expect(guard2({ a: 1, b: 1, c: true })).toBe(false);
+			expect(guard2({})).toBe(false);
+			expect(guard2(undefined)).toBe(false);
+
+			const g = is.union(
+				is.object({ id: is.string }).partial(),
+				is.array(is.object({ id: is.string }).partial()),
+				is.null
+			);
+
+			const result = g.parse(null);
+			expect(result.isOk()).toBe(true);
+		});
 	});
 
 	describe('type narrowing', () => {

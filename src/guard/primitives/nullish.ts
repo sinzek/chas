@@ -18,5 +18,7 @@ export const NullishGuardFactory: NullishGuardFactory = <T>(guard: Guard<T>) => 
 			_nullable: true,
 			_optional: true,
 		},
+		transform: (v: unknown, original: unknown) =>
+			original == null ? original : guard.meta.transform ? guard.meta.transform(v, original) : v,
 	});
 };

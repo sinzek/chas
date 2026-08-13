@@ -36,5 +36,7 @@ export const OptionalGuardFactory: OptionalGuardFactory = <T>(guard: Guard<T>) =
 			...guard.meta.jsonSchema,
 			_optional: true,
 		},
+		transform: (v: unknown, original: unknown) =>
+			original === undefined ? undefined : guard.meta.transform ? guard.meta.transform(v, original) : v,
 	});
 };

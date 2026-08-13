@@ -116,6 +116,12 @@ export interface TransformerResult<T, H> {
 	 */
 	transform?: ((v: any, original: any) => any) | undefined;
 	/**
+	 * If `true`, `transform` replaces the parent's transformation pipeline instead
+	 * of being appended to it. This is useful for wrappers that must short-circuit
+	 * a parent transform for sentinel values such as `null` or `undefined`.
+	 */
+	replaceTransform?: boolean;
+	/**
 	 * If `true`, `helpers` completely replaces the current helper context
 	 * instead of merging with it.
 	 *
